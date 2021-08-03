@@ -14,10 +14,11 @@ void setup(){
 	Serial.begin(115200);
 	delay(100);
 
-	// softAP
+	// softAP https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiAP.h
 	WiFi.mode(WIFI_AP_STA);
-	WiFi.softAPConfig(ip,ip,subnet);
 	WiFi.softAP(ssid,pass);
+	delay(100);//https://github.com/espressif/arduino-esp32/issues/985
+	WiFi.softAPConfig(ip,ip,subnet);
 	IPAddress myIP=WiFi.softAPIP();
 	Serial.print("SSID: ");Serial.println(ssid);
 	Serial.print("PASS: ");Serial.println(pass);
