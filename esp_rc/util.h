@@ -17,59 +17,78 @@ const char* pass="sazanka_";
 // QR
 // WIFI:S:<SSID>;T:<WEP|WPA|無記入>;P:<パスワード>;H:<true|false|無記入>;
 const char html[] PROGMEM=R"rawliteral(
-<!DOCTYPE HTML>
-<html>
-<head>
-	<meta charset="utf-8">
-	<title>esp_rc</title>
-	<meta name="viewport" content="width=device-width,initial-scale=1">
-</head>
-<body>
-	<style>
-		:root{background-color:#222;color:#fff;}
-		.wrapper{transform:rotate(-90deg);}
-		input[type=range]{margin:0;width:100vmin;height:50vmin;box-sizing:border-box;}
-	</style>
-	<div class="wrapper"><input type="range" id="vl"><input type="range" id="vr"></div>
-	<pre id="log">Connecting…</pre>
-	<script>
-		'use strict';
-		let ws,data={},timer=0;
-		const ws_init=()=>{
-			console.log('ws_init');
-			ws=new WebSocket(`ws://${window.location.hostname}/ws`);
-			ws.onopen=e=>{
-				console.log('opened');
-			};
-			ws.onclose=e=>{
-				console.log('closed');
-				setTimeout(ws_init,5000);
-			};
-			ws.onmessage=e=>{
-				(async()=>{
-					data={...data,...JSON.parse(e.data)};
-					log.textContent=JSON.stringify(data,null,'\t');
-					if(data.purpose=="init"){
-						vl.max=vr.max=data.max*2;
-						vl.value=vr.value=data.max;
-						vl.oninput=vr.oninput=()=>{
-							if(!timer)timer=setTimeout(()=>{
-								ws.send(`V_CTR${vl.value.padStart(data.zpad,'0')}${vr.value.padStart(data.zpad,'0')}`);
-								timer=0;
-							},100);
-						};
-					}
-				})().catch(()=>{
-					log.textContent+=`\n${e.data}`;
-				});
-			};
-			ws.onerror=e=>{
-				console.log(e);
-			};
-		};
+	<!DOCTYPE html>
+	<html lang="en" dir="ltr">
+		<head>
+			<meta charset="utf-8">
+			<title></title>
+		</head>
+		<body>
+			<style>
+				:root{transition:.5s;}@media(prefers-color-scheme:dark){:root{background-color:#222;color:#fff;}}body{margin:0;}
+				#stick{position:relative;width:80vmin;height:80vmin;box-shadow:0 0 0 4vmin #8882;border-radius:50%;background:#8884;margin:10vmin auto;touch-action:pinch-zoom;}
+				#stick>*{position:absolute;width:10%;height:10%;border-radius:50%;background-color:#888;pointer-events:none;transform:translate(-50%,-50%);top:50%;left:50%;transition:.05s;will-change:transform;}
+			</style>
+			<div id="stick"><div></div></div>
+			<pre id="log">Connecting…</pre>
+			<script>
+				'use strict';
+				let ws,ws_send=()=>console.log('uninitialized'),recieved={},timer=0,stick_stat=false,stick_style;
+				const ws_init=()=>{
+					console.log('ws_init');
+					ws=new WebSocket(`ws://${window.location.hostname}/ws`);
+					ws.onopen=e=>{
+						log.textContent='Opened :)';console.log('opened');
+					};
+					ws.onclose=e=>{
+						log.textContent='Closed :(';console.log('closed');
+						ws_send=()=>{};
+						setTimeout(ws_init,2000);
+					};
+					ws.onmessage=e=>{
+						(async()=>{
+							recieved={...recieved,...JSON.parse(e.data)};
+							log.textContent=JSON.stringify(recieved,null,'\t');
+							if(recieved.purpose=="init")
+								ws_send=(lr)=>ws.send(`V_CTR${lr.map(x=>String(Math.round((x+1)*recieved.max)).padStart(recieved.zpad,'0')).join('')}`);
+						})().catch(()=>{
+							log.textContent+=`\n${e.data}`;
+						});
+					};
+					ws.onerror=e=>{
+						console.log(e);
+					};
+				};
 
-		window.onload=ws_init;
-	</script>
-</body>
-</html>
+				(window.onresize=()=>stick_style=stick.getBoundingClientRect())();
+				stick.onpointerdown=e=>{
+					stick_stat=true;
+					window.onpointermove(e);
+				};
+				window.onpointerup=window.onpointerleave=window.onpointercancel=()=>{
+					stick_stat=false;
+					clearTimeout(timer);timer=0;ws_send([0,0]);
+					stick.children[0].style.transform='';
+				};
+				window.onpointermove=e=>{
+					if(!stick_stat)return;
+					let pos=[
+						(e.clientX+window.scrollX-stick_style.left-stick_style.width*.5)||0,
+						(e.clientY+window.scrollY-stick_style.top-stick_style.height*.5)||0
+					],l=Math.sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
+					pos=pos.map(x=>x*Math.min(stick_style.width*.5,l)/l);
+					stick.children[0].style.transform=`translate(-50%,-50%)translate(${pos.join('px,')}px)`;
+					if(timer)return;
+					timer=setTimeout(()=>{
+						//https://openrtm.org/openrtm/sites/default/files/6357/171108-04.pdf
+						pos=[Math.atan2(...pos)-Math.PI*.75,Math.min(1,l/stick_style.width*2)];
+						ws_send([Math.cos(pos[0])*pos[1],Math.sin(pos[0])*pos[1]]);
+						timer=0;
+					},100);
+				};
+
+				window.onload=ws_init;
+			</script>
+		</body>
+	</html>
 )rawliteral";
