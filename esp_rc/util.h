@@ -33,7 +33,7 @@ const char html[] PROGMEM=R"rawliteral(
 			<pre id="log">Connecting…</pre>
 			<script>
 				'use strict';
-				let ws,ws_send=()=>console.log('uninitialized'),recieved={},timer=0,stick_stat=false,stick_style;
+				let ws,ws_send=()=>console.log('uninitialized'),recieved={},timer=0,stick_stat=false;
 				const ws_init=()=>{
 					console.log('ws_init');
 					ws=new WebSocket(`ws://${window.location.hostname}/ws`);
@@ -60,7 +60,6 @@ const char html[] PROGMEM=R"rawliteral(
 					};
 				};
 
-				(window.onresize=()=>stick_style=stick.getBoundingClientRect())();
 				stick.onpointerdown=e=>{
 					stick_stat=true;
 					window.onpointermove(e);
@@ -72,6 +71,7 @@ const char html[] PROGMEM=R"rawliteral(
 				};
 				window.onpointermove=e=>{
 					if(!stick_stat)return;
+					const stick_style=stick.getBoundingClientRect();
 					let pos=[
 						(e.clientX+window.scrollX-stick_style.left-stick_style.width*.5)||0,
 						(e.clientY+window.scrollY-stick_style.top-stick_style.height*.5)||0
