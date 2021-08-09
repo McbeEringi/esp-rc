@@ -54,18 +54,16 @@
 				if(!stick_stat)return;
 				const stick_style=stick.getBoundingClientRect();
 				let pos=[
-					(e.clientX+window.scrollX-stick_style.left-stick_style.width*.5)||0,
-					(e.clientY+window.scrollY-stick_style.top-stick_style.height*.5)||0
+					(e.clientX-stick_style.left-stick_style.width*.5)||0,
+					(e.clientY-stick_style.top-stick_style.height*.5)||0
 				],l=Math.sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
 				pos=pos.map(x=>x*Math.min(stick_style.width*.5,l)/l);
 				stick.children[0].style.transform=`translate(-50%,-50%)translate(${pos.join('px,')}px)`;
 				if(timer)return;
-				timer=setTimeout(()=>{
-					//https://openrtm.org/openrtm/sites/default/files/6357/171108-04.pdf
-					pos=[Math.atan2(...pos)-Math.PI*.75,Math.min(1,l/stick_style.width*2)];
-					ws_send([Math.cos(pos[0])*pos[1],Math.sin(pos[0])*pos[1]]);
-					timer=0;
-				},100);
+				//https://openrtm.org/openrtm/sites/default/files/6357/171108-04.pdf
+				pos=[Math.atan2(...pos)-Math.PI*.75,Math.min(1,l/stick_style.width*2)];
+				ws_send([Math.cos(pos[0])*pos[1],Math.sin(pos[0])*pos[1]]);
+				timer=setTimeout(()=>timer=0,100);
 			};
 
 			window.onload=ws_init;
