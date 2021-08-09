@@ -25,12 +25,16 @@ const char html[] PROGMEM=R"rawliteral(
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
 <body>
-	<input type="range" id="vl">
-	<input type="range" id="vr">
+	<style>
+		:root{background-color:#222;color:#fff;}
+		.wrapper{transform:rotate(-90deg);}
+		input[type=range]{margin:0;width:100vmin;height:50vmin;box-sizing:border-box;}
+	</style>
+	<div class="wrapper"><input type="range" id="vl"><input type="range" id="vr"></div>
 	<pre id="log">Connecting…</pre>
 	<script>
 		'use strict';
-		let ws,data={};
+		let ws,data={},timer=0;
 		const ws_init=()=>{
 			console.log('ws_init');
 			ws=new WebSocket(`ws://${window.location.hostname}/ws`);
@@ -48,7 +52,12 @@ const char html[] PROGMEM=R"rawliteral(
 					if(data.purpose=="init"){
 						vl.max=vr.max=data.max*2;
 						vl.value=vr.value=data.max;
-						vl.onchange=vr.onchange=()=>ws.send(`V_CTR${vl.value.padStart(data.zpad,'0')}${vr.value.padStart(data.zpad,'0')}`);
+						vl.oninput=vr.oninput=()=>{
+							if(!timer)timer=setTimeout(()=>{
+								ws.send(`V_CTR${vl.value.padStart(data.zpad,'0')}${vr.value.padStart(data.zpad,'0')}`);
+								timer=0;
+							},100);
+						};
 					}
 				})().catch(()=>{
 					log.textContent+=`\n${e.data}`;

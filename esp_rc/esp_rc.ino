@@ -46,8 +46,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 						// example: "V_CTR256256"
 						v[0]=str.substring(5,5+WS_ZERO_PAD).toInt()-PWM_MAX;
 						v[1]=str.substring(5+WS_ZERO_PAD,5+WS_ZERO_PAD+WS_ZERO_PAD).toInt()-PWM_MAX;
-						v[0]=v[0]*5/6;
-						v[1]=v[1]*5/6;
+						//v[0]=v[0]*5/6;v[1]=v[1]*5/6;
 						Serial.printf("%d %d\n",v[0],v[1]);
 						ws.printfAll("{\"purpose\":\"check\",\"vl\":%d,\"vr\":%d}",v[0],v[1]);
 					}
@@ -103,6 +102,6 @@ void setup(){
 void loop(){
 	//ArduinoOTA.handle();
 	ws.cleanupClients();
-	if(v[0]>0){ledcWrite(I3PWM,0);ledcWrite(I4PWM,v[0]);}else{ledcWrite(I3PWM,-v[0]);ledcWrite(I4PWM,0);}
-	if(v[1]>0){ledcWrite(I1PWM,0);ledcWrite(I2PWM,v[1]);}else{ledcWrite(I1PWM,-v[1]);ledcWrite(I2PWM,0);}
+	if(v[0]>0){ledcWrite(I1PWM,0);ledcWrite(I2PWM,v[0]);}else{ledcWrite(I1PWM,-v[0]);ledcWrite(I2PWM,0);}
+	if(v[1]>0){ledcWrite(I3PWM,0);ledcWrite(I4PWM,v[1]);}else{ledcWrite(I3PWM,-v[1]);ledcWrite(I4PWM,0);}
 }
