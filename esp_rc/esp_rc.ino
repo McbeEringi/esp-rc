@@ -9,7 +9,7 @@
 #include "util.h"
 
 const IPAddress ip(192,168,1,1);
-const IPAddress subnet(255, 255, 255, 0);
+const IPAddress subnet(255,255,255,0);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
@@ -65,9 +65,7 @@ void setup(){
 	WiFi.softAP(ssid,pass);
 	delay(100);//https://github.com/espressif/arduino-esp32/issues/985
 	WiFi.softAPConfig(ip,ip,subnet);
-	Serial.printf("SSID: %s\n",ssid);//Serial.print("SSID: ");Serial.println(ssid);
-	Serial.printf("PASS: %s\n",pass);//Serial.print("PASS: ");Serial.println(pass);
-	Serial.printf("APIP: %s\n",WiFi.softAPIP().toString().c_str());//Serial.print("APIP: ");Serial.println(myIP);
+	Serial.printf("SSID: %s\nPASS: %s\nAPIP: %s\n",ssid,pass,WiFi.softAPIP().toString().c_str());
 
 	ws.onEvent(onEvent);
 	server.addHandler(&ws);
