@@ -21,7 +21,9 @@ const char html[] PROGMEM=R"rawliteral(
 	<html lang="en" dir="ltr">
 		<head>
 			<meta charset="utf-8">
-			<title></title>
+			<meta name="viewport" content="width=device-width,initial-scale=1">
+			<title>esp_rc</title>
+			<meta name="theme-color" content="#912b31"/>
 		</head>
 		<body>
 			<style>
