@@ -9,7 +9,7 @@
 //PWM_MAX=2^PWM_BIT
 //2^16=65536
 #define WS_ZERO_PAD 3
-//shuuld be grater than length of PWM_MAX
+//should be grater than length of PWM_MAX
 
 
 const char* ssid="esp_rc_proto";
@@ -50,7 +50,7 @@ const char html[] PROGMEM=R"rawliteral(
 							recieved={...recieved,...JSON.parse(e.data)};
 							log.textContent=JSON.stringify(recieved,null,'\t');
 							if(recieved.purpose=="init")
-								ws_send=(lr)=>ws.send(`V_CTR${lr.map(x=>String(Math.round((x+1)*recieved.max)).padStart(recieved.zpad,'0')).join('')}`);
+								ws_send=(lr)=>ws.send(`V_CTR${lr.map(x=>String(Math.round((Math.sqrt(Math.abs(x))*Math.sign(x)+1)*recieved.max)).padStart(recieved.zpad,'0')).join('')}`);
 						})().catch(()=>{
 							log.textContent+=`\n${e.data}`;
 						});
