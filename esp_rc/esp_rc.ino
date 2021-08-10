@@ -58,7 +58,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 
 void setup(){
 	Serial.begin(115200);
-	delay(100);
+	delay(1000);
 
 	// softAP https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiAP.h
 	WiFi.mode(WIFI_AP_STA);
