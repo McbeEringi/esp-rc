@@ -1,6 +1,6 @@
 #include <WiFi.h>
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>//https://github.com/me-no-dev/ESPAsyncWebServer
+#include <AsyncTCP.h>// https://github.com/me-no-dev/AsyncTCP
+#include <ESPAsyncWebServer.h>// https://github.com/me-no-dev/ESPAsyncWebServer
 
 #define I1PWM 0
 #define I2PWM 1
@@ -22,7 +22,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 		case WS_EVT_CONNECT:
 			Serial.printf("ws[%u] connect: %s\n", client->id(), client->remoteIP().toString().c_str());
 			client->printf("{\"purpose\":\"init\",\"cid\":%u,\"cip\":\"%s\",\"max\":%u,\"zpad\":%u}", client->id(), client->remoteIP().toString().c_str(), PWM_MAX, ZPAD);
-			client->ping();
+			//client->ping();
 			break;
 		case WS_EVT_DISCONNECT:
 			Serial.printf("ws[%u] disconnect\n", client->id());
