@@ -12,14 +12,16 @@ const IPAddress ip(192,168,1,1);
 const IPAddress subnet(255,255,255,0);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
+const long PWM_MAX=pow(2,PWM_BIT);
+const int ZPAD=1+(int)log10(PWM_MAX*2);
 
-int v[2]={0,0};//L,R
+long v[2]={0,0};//L,R
 
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len){
 	switch(type){
 		case WS_EVT_CONNECT:
 			Serial.printf("ws[%u] connect: %s\n", client->id(), client->remoteIP().toString().c_str());
-			client->printf("{\"purpose\":\"init\",\"cid\":%u,\"cip\":\"%s\",\"max\":%u,\"zpad\":%u}", client->id(), client->remoteIP().toString().c_str(),PWM_MAX,WS_ZERO_PAD);
+			client->printf("{\"purpose\":\"init\",\"cid\":%u,\"cip\":\"%s\",\"max\":%u,\"zpad\":%u}", client->id(), client->remoteIP().toString().c_str(), PWM_MAX, ZPAD);
 			client->ping();
 			break;
 		case WS_EVT_DISCONNECT:
@@ -44,8 +46,8 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 						// "V_CTR[L<int>][R<int>]"
 						// 0padding needed
 						// example: "V_CTR256256"
-						v[0]=str.substring(5,5+WS_ZERO_PAD).toInt()-PWM_MAX;
-						v[1]=str.substring(5+WS_ZERO_PAD,5+WS_ZERO_PAD+WS_ZERO_PAD).toInt()-PWM_MAX;
+						v[0]=str.substring(5,5+ZPAD).toInt()-PWM_MAX;
+						v[1]=str.substring(5+ZPAD,5+ZPAD+ZPAD).toInt()-PWM_MAX;
 						//v[0]=v[0]*5/6;v[1]=v[1]*5/6;
 						Serial.printf("%d %d\n",v[0],v[1]);
 						ws.printfAll("{\"purpose\":\"check\",\"vl\":%d,\"vr\":%d}",v[0],v[1]);

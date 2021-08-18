@@ -3,14 +3,9 @@
 #define I3 17
 #define I4 16
 
+// https://lang-ship.com/blog/work/esp32-pwm-max/
 #define PWM_FREQ 1045.0
 #define PWM_BIT 8
-#define PWM_MAX 256
-//PWM_MAX=2^PWM_BIT
-//2^16=65536
-#define WS_ZERO_PAD 3
-//should be grater than length of PWM_MAX
-
 
 const char* ssid="esp_rc_proto";
 const char* pass="sazanka_";
