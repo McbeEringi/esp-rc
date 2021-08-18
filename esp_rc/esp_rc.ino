@@ -1,4 +1,5 @@
 #include <WiFi.h>
+#include <ArduinoOTA.h>
 #include <AsyncTCP.h>// https://github.com/me-no-dev/AsyncTCP
 #include <ESPAsyncWebServer.h>// https://github.com/me-no-dev/ESPAsyncWebServer
 
@@ -74,25 +75,17 @@ void setup(){
 	server.on("/",HTTP_GET,[](AsyncWebServerRequest *request){
 		request->send_P(200,"text/html",html);
 	});
-
 	server.begin();
 	Serial.println("server started");
-	/*PACKAGE BUG? does not work after first OTA
-		// OTA	https://web.is.tokushima-u.ac.jp/wp/blog/2018/04/12/esp32-arduino-softapでotaプログラム書き込み/
-		ArduinoOTA.setPassword("sazanka_");
-		ArduinoOTA
-			.onStart([](){Serial.print("Start updating ");Serial.println(ArduinoOTA.getCommand()==U_FLASH?"sketch":"filesystem");})
-			.onEnd([](){Serial.println("\nEnd");})
-			.onProgress([](unsigned int progress, unsigned int total){Serial.printf("Progress: %u%%\r",(progress/(total/100)));})
-			.onError([](ota_error_t error){
-				if(error==OTA_AUTH_ERROR)Serial.println("Auth Error");
-				else if(error==OTA_BEGIN_ERROR)Serial.println("Begin Error");
-				else if(error==OTA_CONNECT_ERROR)Serial.println("Connect Error");
-				else if(error==OTA_RECEIVE_ERROR)Serial.println("Receive Error");
-				else if(error==OTA_END_ERROR)Serial.println("End Error");
-			});
-		ArduinoOTA.begin();
-	*/
+
+	ArduinoOTA
+		.setPassword("sazanka_")
+		.onStart([](){Serial.printf("Start updating %s\n",ArduinoOTA.getCommand()==U_FLASH?"sketch":"filesystem");})
+		.onEnd([](){Serial.println("\nEnd");})
+		.onProgress([](unsigned int progress, unsigned int total){Serial.printf("Progress: %u%%\r",(progress/(total/100)));})
+		.onError([](ota_error_t error){Serial.printf("Error[%u]", error);})
+		.begin();
+
 	ledcSetup(I1PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I1,I1PWM);
 	ledcSetup(I2PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I2,I2PWM);
 	ledcSetup(I3PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I3,I3PWM);
@@ -100,7 +93,7 @@ void setup(){
 }
 
 void loop(){
-	//ArduinoOTA.handle();
+	ArduinoOTA.handle();
 	ws.cleanupClients();
 	if(v[0]>0){ledcWrite(I1PWM,0);ledcWrite(I2PWM,v[0]);}else{ledcWrite(I1PWM,-v[0]);ledcWrite(I2PWM,0);}
 	if(v[1]>0){ledcWrite(I3PWM,0);ledcWrite(I4PWM,v[1]);}else{ledcWrite(I3PWM,-v[1]);ledcWrite(I4PWM,0);}
