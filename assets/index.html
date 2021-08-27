@@ -8,9 +8,9 @@
 	</head>
 	<body>
 		<style>
-			:root{transition:.5s;}@media(prefers-color-scheme:dark){:root{background-color:#222;color:#fff;}}body{margin:0;}
-			#stick{position:relative;width:80vmin;height:80vmin;box-shadow:0 0 0 4vmin #8882;border-radius:50%;background:#8884;margin:10vmin auto;touch-action:pinch-zoom;user-select:none;-webkit-user-select:none;}
-			#stick>*{position:absolute;width:10%;height:10%;border-radius:50%;background-color:#888;pointer-events:none;transform:translate(-50%,-50%);top:50%;left:50%;transition:.05s;will-change:transform;}
+			:root{transition:.5s;--box:min(100vmin,480px);--cir:0.8;--dot:0.1;}@media(prefers-color-scheme:dark){:root{background-color:#222;color:#fff;}}body{margin:0;}
+			#stick{position:relative;width:calc(var(--box) * var(--cir));height:calc(var(--box) * var(--cir));box-shadow:0 0 0 calc(var(--box) * calc(calc(var(--cir) * var(--dot)) / 2)) #8882;border-radius:50%;background:#8884;margin:calc(var(--box) * calc(calc(1 - var(--cir)) / 2)) auto;user-select:none;-webkit-user-select:none;}
+			#stick>*{position:absolute;width:calc(100% * var(--dot));height:calc(100% * var(--dot));border-radius:50%;background-color:#888;pointer-events:none;top:calc(50% * calc(1 - var(--dot)));left:calc(50% * calc(1 - var(--dot)));transition:.05s;will-change:transform;}
 		</style>
 		<div id="stick"><div></div></div>
 		<pre id="log">Connecting…</pre>
@@ -21,28 +21,23 @@
 				console.log('ws_init');
 				ws=new WebSocket(`ws://${window.location.hostname}/ws`);
 				ws.onopen=e=>{
-					log.textContent='Opened :)';console.log('opened');
+					console.log(log.textContent='Opened :)');
 				};
 				ws.onclose=e=>{
-					log.textContent='Closed :(';console.log('closed');
+					console.log(log.textContent='Closed :(');
 					ws_send=()=>{};
 					setTimeout(ws_init,2000);
 				};
 				ws.onmessage=e=>{
-					(async()=>{
-						recieved={...recieved,...JSON.parse(e.data)};
-						log.textContent=JSON.stringify(recieved,null,'\t');
-						if(recieved.purpose=="init")
-							ws_send=(lr)=>ws.send(`V_CTR${lr.map(x=>String(Math.round((Math.sqrt(Math.abs(x))*Math.sign(x)+1)*recieved.max)).padStart(recieved.zpad,'0')).join('')}`);
-					})().catch(()=>{
-						log.textContent+=`\n${e.data}`;
-					});
+					Object.assign(recieved,JSON.parse(e.data));
+					log.textContent=JSON.stringify(recieved,null,'\t');
+					if(recieved.purpose=='init')
+						ws_send=lr=>ws.send(`V_CTR${lr.map(x=>String(Math.round((Math.sqrt(Math.abs(x))*Math.sign(x)+1)*recieved.max)).padStart(recieved.zpad,'0')).join('')}`);
 				};
-				ws.onerror=e=>{
-					console.log(e);
-				};
+				ws.onerror=console.log;
 			};
 
+			stick.ontouchstart=e=>e.preventDefault();
 			stick.onpointerdown=e=>{
 				stick_stat=true;
 				window.onpointermove(e);
@@ -60,7 +55,7 @@
 					(e.clientY-stick_style.top-stick_style.height*.5)||0
 				],l=Math.sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
 				pos=pos.map(x=>x*Math.min(stick_style.width*.5,l)/l);
-				stick.children[0].style.transform=`translate(-50%,-50%)translate(${pos.join('px,')}px)`;
+				stick.children[0].style.transform=`translate(${pos.join('px,')}px)`;
 				if(timer)return;
 				//https://openrtm.org/openrtm/sites/default/files/6357/171108-04.pdf
 				pos=[Math.atan2(...pos)-Math.PI*.75,Math.min(1,l/stick_style.width*2)];
