@@ -13,7 +13,7 @@ const IPAddress ip(192,168,1,1);
 const IPAddress subnet(255,255,255,0);
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
-const long PWM_MAX=pow(2,PWM_BIT);
+const long PWM_MAX=pow(2,PWM_BIT),_Z=0;
 const int ZPAD=1+(int)log10(PWM_MAX*2);
 
 long v[2]={0,0};//L,R
@@ -95,6 +95,10 @@ void setup(){
 void loop(){
 	ArduinoOTA.handle();
 	ws.cleanupClients();
-	if(v[0]>0){ledcWrite(I1PWM,0);ledcWrite(I2PWM,v[0]);}else{ledcWrite(I1PWM,-v[0]);ledcWrite(I2PWM,0);}
-	if(v[1]>0){ledcWrite(I3PWM,0);ledcWrite(I4PWM,v[1]);}else{ledcWrite(I3PWM,-v[1]);ledcWrite(I4PWM,0);}
+  //short break
+  ledcWrite(I1PWM,PWM_MAX-max(_Z,v[0]));ledcWrite(I2PWM,PWM_MAX-max(_Z,-v[0]));//if(v[0]>0){ledcWrite(I1PWM,PWM_MAX-v[0]);ledcWrite(I2PWM,PWM_MAX);}else{ledcWrite(I1PWM,PWM_MAX);ledcWrite(I2PWM,PWM_MAX+v[0]);}
+  ledcWrite(I3PWM,PWM_MAX-max(_Z,v[1]));ledcWrite(I4PWM,PWM_MAX-max(_Z,-v[1]));//if(v[1]>0){ledcWrite(I3PWM,PWM_MAX-v[1]);ledcWrite(I4PWM,PWM_MAX);}else{ledcWrite(I3PWM,PWM_MAX);ledcWrite(I4PWM,PWM_MAX+v[1]);}
+  //no break
+	//ledcWrite(I1PWM,min(0,-v[0]));ledcWrite(I2PWM,max(0,v[0]));//if(v[0]>0){ledcWrite(I1PWM,0);ledcWrite(I2PWM,v[0]);}else{ledcWrite(I1PWM,-v[0]);ledcWrite(I2PWM,0);}
+	//ledcWrite(I3PWM,min(0,-v[1]));ledcWrite(I4PWM,max(0,v[1]));//if(v[1]>0){ledcWrite(I3PWM,0);ledcWrite(I4PWM,v[1]);}else{ledcWrite(I3PWM,-v[1]);ledcWrite(I4PWM,0);}
 }

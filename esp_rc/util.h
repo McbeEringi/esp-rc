@@ -4,8 +4,8 @@
 #define I4 16
 
 // https://lang-ship.com/blog/work/esp32-pwm-max/
-#define PWM_FREQ 1045.0
-#define PWM_BIT 8
+#define PWM_FREQ 39062.5
+#define PWM_BIT 11
 
 const char* ssid="esp_rc_proto";
 const char* pass="sazanka_";
