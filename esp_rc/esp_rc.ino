@@ -1,5 +1,8 @@
 #include <WiFi.h>
 #include <ArduinoOTA.h>
+#ifdef CAPTIVE_PORTAL
+  #include <DNSServer.h>
+#endif
 #include <AsyncTCP.h>// https://github.com/me-no-dev/AsyncTCP
 #include <ESPAsyncWebServer.h>// https://github.com/me-no-dev/ESPAsyncWebServer
 
@@ -15,6 +18,9 @@
 
 const IPAddress ip(192,168,1,1);
 const IPAddress subnet(255,255,255,0);
+#ifdef CAPTIVE_PORTAL
+  DNSServer dnsServer;
+#endif
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 const long PWM_MAX=pow(2,PWM_BIT),_Z=0;
@@ -62,14 +68,15 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 			break;
 	}
 }
-//class CP:public AsyncWebHandler{
-//public:
-//  CaptiveRequestHandler(){}
-//  virtual ~CaptiveRequestHandler(){}
-//
-//  bool canHandle(AsyncWebServerRequest *request){return true;}
-//  void handleRequest(AsyncWebServerRequest *request){request->send_P(200,"text/html",html);}
-//};
+#ifdef CAPTIVE_PORTAL
+class CP:public AsyncWebHandler{
+public:
+  CP(){}
+  virtual ~CP(){}
+  bool canHandle(AsyncWebServerRequest *request){return true;}
+  void handleRequest(AsyncWebServerRequest *request){request->send_P(200,"text/html",html);}
+};
+#endif
 
 void setup(){
   #ifdef STATLED
@@ -85,11 +92,16 @@ void setup(){
 	WiFi.softAP(ssid,pass);
 	delay(100);//https://github.com/espressif/arduino-esp32/issues/985
 	WiFi.softAPConfig(ip,ip,subnet);
-	Serial.printf("SSID: %s\nPASS: %s\nAPIP: %s\n",ssid,pass,WiFi.softAPIP().toString().c_str());
+  #ifdef CAPTIVE_PORTAL
+    dnsServer.start(53, "*", WiFi.softAPIP());
+  #endif
+  Serial.printf("SSID: %s\nPASS: %s\nAPIP: %s\n",ssid,pass,WiFi.softAPIP().toString().c_str());
 
 	ws.onEvent(onEvent);
 	server.addHandler(&ws);
-  //server.addHandler(new CP());
+  #ifdef CAPTIVE_PORTAL
+    server.addHandler(new CP());
+  #endif
 	server.on("/",HTTP_GET,[](AsyncWebServerRequest *request){request->send_P(200,"text/html",html);});
 	server.begin();
 	Serial.println("server started");
@@ -110,6 +122,9 @@ void setup(){
 
 void loop(){
 	ArduinoOTA.handle();
+  #ifdef CAPTIVE_PORTAL
+    dnsServer.processNextRequest();
+  #endif
 	ws.cleanupClients();
   //short break
   ledcWrite(I1PWM,PWM_MAX-max(_Z,v[0]));ledcWrite(I2PWM,PWM_MAX-max(_Z,-v[0]));//if(v[0]>0){ledcWrite(I1PWM,PWM_MAX-v[0]);ledcWrite(I2PWM,PWM_MAX);}else{ledcWrite(I1PWM,PWM_MAX);ledcWrite(I2PWM,PWM_MAX+v[0]);}

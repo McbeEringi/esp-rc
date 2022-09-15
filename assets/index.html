@@ -4,19 +4,18 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width,initial-scale=1">
 		<title>esp_rc</title>
-		<meta name="theme-color" content="#912b31"/>
 	</head>
 	<body>
 		<style>
 			:root{transition:.5s;--box:min(100vmin,480px);--cir:0.8;--dot:0.1;image-rendering:pixelated;}@media(prefers-color-scheme:dark){:root{background-color:#222;color:#fff;}}body{margin:0;}
 			#stick{position:relative;width:calc(var(--box)*var(--cir));height:calc(var(--box)*var(--cir));box-shadow:0 0 0 calc(var(--box)*calc(calc(var(--cir)*var(--dot))/2)) #8882;border-radius:50%;background:#8884 0 0/100% url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGklEQVQI12NkYGDg/f//PwPT////GRgZGRkAObwGDol2alsAAAAASUVORK5CYII=);margin:calc(var(--box) * calc(calc(1 - var(--cir)) / 2)) auto;user-select:none;-webkit-user-select:none;}
-			#stick>*{position:absolute;width:calc(100% * var(--dot));height:calc(100% * var(--dot));border-radius:50%;background-color:#888;pointer-events:none;top:calc(50% * calc(1 - var(--dot)));left:calc(50% * calc(1 - var(--dot)));transition:.05s;will-change:transform;}
+			#stick>*{position:absolute;width:calc(100%*var(--dot));height:calc(100%*var(--dot));border-radius:50%;background-color:#888;pointer-events:none;top:50%;left:50%;transition:.05s;will-change:transform;}
 		</style>
 		<div id="stick"><div></div></div>
 		<pre id="log">Connecting…</pre>
 		<script>
 			'use strict';
-			let ws,ws_send=()=>console.log('uninitialized'),recieved={},timer=0,stick_stat=false;
+			let ws,ws_send=()=>console.log('uninitialized'),recieved={},timer,stick_stat;
 			const ws_init=()=>{
 				console.log('ws_init');
 				ws=new WebSocket(`ws://${window.location.hostname}/ws`);
@@ -44,11 +43,11 @@
 				stick_stat=true;
 				window.onpointermove(e);
 			};
-			window.onpointerup=window.onpointerleave=window.onpointercancel=()=>{
+			(window.onpointerup=window.onpointerleave=window.onpointercancel=()=>{
 				stick_stat=false;
 				clearTimeout(timer);timer=0;ws_send([0,0]);
-				stick.children[0].style.transform='';
-			};
+				stick.children[0].style.transform='translate(-50%,-50%)';
+			})();
 			window.onpointermove=e=>{
 				if(!stick_stat||timer)return;
 				const stick_style=stick.getBoundingClientRect();
@@ -57,7 +56,7 @@
 					(e.clientY-stick_style.top-stick_style.height*.5)||0
 				],l=Math.sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
 				pos=pos.map(x=>x*Math.min(stick_style.width*.5,l)/l);
-				stick.children[0].style.transform=`translate(${pos.join('px,')}px)`;
+				stick.children[0].style.transform=`translate(calc(${pos[0]}px - 50%),calc(${pos[1]}px - 50%))`;
 				//https://openrtm.org/openrtm/sites/default/files/6357/171108-04.pdf
 				pos=[Math.atan2(...pos)-Math.PI*.75,Math.min(1,l/stick_style.width*2)];
 				ws_send([Math.cos(pos[0])*pos[1],Math.sin(pos[0])*pos[1]]);
