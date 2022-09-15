@@ -8,8 +8,8 @@
 	</head>
 	<body>
 		<style>
-			:root{transition:.5s;--box:min(100vmin,480px);--cir:0.8;--dot:0.1;}@media(prefers-color-scheme:dark){:root{background-color:#222;color:#fff;}}body{margin:0;}
-			#stick{position:relative;width:calc(var(--box) * var(--cir));height:calc(var(--box) * var(--cir));box-shadow:0 0 0 calc(var(--box) * calc(calc(var(--cir) * var(--dot)) / 2)) #8882;border-radius:50%;background:#8884;margin:calc(var(--box) * calc(calc(1 - var(--cir)) / 2)) auto;user-select:none;-webkit-user-select:none;}
+			:root{transition:.5s;--box:min(100vmin,480px);--cir:0.8;--dot:0.1;image-rendering:pixelated;}@media(prefers-color-scheme:dark){:root{background-color:#222;color:#fff;}}body{margin:0;}
+			#stick{position:relative;width:calc(var(--box)*var(--cir));height:calc(var(--box)*var(--cir));box-shadow:0 0 0 calc(var(--box)*calc(calc(var(--cir)*var(--dot))/2)) #8882;border-radius:50%;background:#8884 0 0/100% url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGklEQVQI12NkYGDg/f//PwPT////GRgZGRkAObwGDol2alsAAAAASUVORK5CYII=);margin:calc(var(--box) * calc(calc(1 - var(--cir)) / 2)) auto;user-select:none;-webkit-user-select:none;}
 			#stick>*{position:absolute;width:calc(100% * var(--dot));height:calc(100% * var(--dot));border-radius:50%;background-color:#888;pointer-events:none;top:calc(50% * calc(1 - var(--dot)));left:calc(50% * calc(1 - var(--dot)));transition:.05s;will-change:transform;}
 		</style>
 		<div id="stick"><div></div></div>
@@ -29,10 +29,12 @@
 					setTimeout(ws_init,2000);
 				};
 				ws.onmessage=e=>{
+					if(ws.timer)return;ws.timer=!0;
 					Object.assign(recieved,JSON.parse(e.data));
 					log.textContent=JSON.stringify(recieved,null,'\t');
 					if(recieved.purpose=='init')
 						ws_send=lr=>ws.send(`V_CTR${lr.map(x=>String(Math.round((Math.sqrt(Math.abs(x))*Math.sign(x)+1)*recieved.max)).padStart(recieved.zpad,'0')).join('')}`);
+					delete ws.timer;
 				};
 				ws.onerror=console.log;
 			};
@@ -48,7 +50,7 @@
 				stick.children[0].style.transform='';
 			};
 			window.onpointermove=e=>{
-				if(!stick_stat)return;
+				if(!stick_stat||timer)return;
 				const stick_style=stick.getBoundingClientRect();
 				let pos=[
 					(e.clientX-stick_style.left-stick_style.width*.5)||0,
@@ -56,11 +58,10 @@
 				],l=Math.sqrt(pos[0]*pos[0]+pos[1]*pos[1]);
 				pos=pos.map(x=>x*Math.min(stick_style.width*.5,l)/l);
 				stick.children[0].style.transform=`translate(${pos.join('px,')}px)`;
-				if(timer)return;
 				//https://openrtm.org/openrtm/sites/default/files/6357/171108-04.pdf
 				pos=[Math.atan2(...pos)-Math.PI*.75,Math.min(1,l/stick_style.width*2)];
 				ws_send([Math.cos(pos[0])*pos[1],Math.sin(pos[0])*pos[1]]);
-				timer=setTimeout(()=>timer=0,100);
+				timer=setTimeout(()=>timer=0,50);
 			};
 
 			window.onload=ws_init;

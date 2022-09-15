@@ -3,11 +3,15 @@
 #include <AsyncTCP.h>// https://github.com/me-no-dev/AsyncTCP
 #include <ESPAsyncWebServer.h>// https://github.com/me-no-dev/ESPAsyncWebServer
 
+#include "util.h"
 #define I1PWM 0
 #define I2PWM 1
 #define I3PWM 2
 #define I4PWM 3
-#include "util.h"
+#ifdef STATLED
+  #define RPWM 4
+  #define GPWM 5
+#endif
 
 const IPAddress ip(192,168,1,1);
 const IPAddress subnet(255,255,255,0);
@@ -58,8 +62,21 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 			break;
 	}
 }
+//class CP:public AsyncWebHandler{
+//public:
+//  CaptiveRequestHandler(){}
+//  virtual ~CaptiveRequestHandler(){}
+//
+//  bool canHandle(AsyncWebServerRequest *request){return true;}
+//  void handleRequest(AsyncWebServerRequest *request){request->send_P(200,"text/html",html);}
+//};
 
 void setup(){
+  #ifdef STATLED
+    ledcSetup(RPWM,PWM_FREQ,PWM_BIT);ledcAttachPin(RPIN,RPWM);
+    ledcSetup(GPWM,PWM_FREQ,PWM_BIT);ledcAttachPin(GPIN,GPWM);
+    ledcWrite(RPWM,PWM_MAX/2);
+  #endif
 	Serial.begin(115200);
 	delay(1000);
 
@@ -72,9 +89,8 @@ void setup(){
 
 	ws.onEvent(onEvent);
 	server.addHandler(&ws);
-	server.on("/",HTTP_GET,[](AsyncWebServerRequest *request){
-		request->send_P(200,"text/html",html);
-	});
+  //server.addHandler(new CP());
+	server.on("/",HTTP_GET,[](AsyncWebServerRequest *request){request->send_P(200,"text/html",html);});
 	server.begin();
 	Serial.println("server started");
 
@@ -101,4 +117,13 @@ void loop(){
   //no break
 	//ledcWrite(I1PWM,min(0,-v[0]));ledcWrite(I2PWM,max(0,v[0]));//if(v[0]>0){ledcWrite(I1PWM,0);ledcWrite(I2PWM,v[0]);}else{ledcWrite(I1PWM,-v[0]);ledcWrite(I2PWM,0);}
 	//ledcWrite(I3PWM,min(0,-v[1]));ledcWrite(I4PWM,max(0,v[1]));//if(v[1]>0){ledcWrite(I3PWM,0);ledcWrite(I4PWM,v[1]);}else{ledcWrite(I3PWM,-v[1]);ledcWrite(I4PWM,0);}
+  #ifdef STATLED
+    if(ws.count()>0){
+      ledcWrite(RPWM,(v[0]+PWM_MAX)/4);
+      ledcWrite(GPWM,(v[1]+PWM_MAX)/4);
+    }else{
+      ledcWrite(RPWM,0);
+      ledcWrite(GPWM,(sin(millis()/1000.*3.1415)*.5+.5)*PWM_MAX/2);
+    }
+  #endif
 }
