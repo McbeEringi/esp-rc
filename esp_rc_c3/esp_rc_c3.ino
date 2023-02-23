@@ -47,8 +47,8 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
         }else{
           // velocity [0,L,L,R,R]
           // BE
-          v[0]=((data[1]<<1)|data[2])-PWM_MAX;
-          v[1]=((data[3]<<1)|data[4])-PWM_MAX;
+          v[0]=((data[1]<<8)|data[2])-PWM_MAX;
+          v[1]=((data[3]<<8)|data[4])-PWM_MAX;
           ws->printfAll("[\"vel\",[%d,%d]]",v[0],v[1]);
           Serial.printf("[\"vel\",[%d,%d]]\n",v[0],v[1]);
         }

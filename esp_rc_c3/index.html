@@ -34,7 +34,7 @@
 					}
 				});
 			},
-			send=lr=>(console.log(lr,lr.flatMap(x=>(x=(x+1)*(2**10-1),[x>>8,x&0xff]))),ws.readyState==1)&&ws.send(new Uint8Array(0,lr.flatMap(x=>(x=(x+1)*(2**d.bit-1),[x>>8,x&0xff]))).buffer);
+			send=lr=>ws.readyState==1&&ws.send(new Uint8Array([0,...lr.flatMap(x=>(x=(x+1)*(2**d.bit-1),[x>>8,x&0xff]))]).buffer);
 
 			stick.ontouchstart=e=>e.preventDefault();
 			stick.onpointerdown=e=>{
