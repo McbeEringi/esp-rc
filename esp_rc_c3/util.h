@@ -57,7 +57,7 @@ const char html[] PROGMEM=R"rawliteral(
 						onmessage:e=>(
 							e=new Uint8Array(e.data),
 							([
-								_=>(w.id=e[1],w.max=2**e[2]-1),
+								_=>(w.id=e[1],w.max=2**e[2]),
 								_=>flush(w.op=e[1],w.clis=[...e].slice(2)),
 								_=>w.vel=[(e[1]<<8|e[2])-w.max,(e[3]<<8|e[4])-w.max]
 							][e[0]]||(_=>w.msg=td.decode(e)))(),

@@ -101,13 +101,7 @@ void loop() {
 
   ledcWrite(I1PWM,PWM_MAX-max(0,+v[0]));ledcWrite(I2PWM,PWM_MAX-max(0,-v[0]));
   ledcWrite(I3PWM,PWM_MAX-max(0,+v[1]));ledcWrite(I4PWM,PWM_MAX-max(0,-v[1]));
-  #if 1
-    if(op){
-      ledcWrite(RPWM,(v[0]+PWM_MAX)>>3);
-      ledcWrite(GPWM,(v[1]+PWM_MAX)>>3);
-    }else{
-      ledcWrite(RPWM,0);
-      ledcWrite(GPWM,(sin(millis()/1000.*3.1415)*.5+.5)*PWM_MAX/4.);
-    }
-  #endif
+
+  ledcWrite(RPWM,op?(v[0]+PWM_MAX)>>3:0);
+  ledcWrite(GPWM,op?(v[1]+PWM_MAX)>>3:(sin(millis()/1000.*3.1415)*.5+.5)*PWM_MAX/4.);
 }
