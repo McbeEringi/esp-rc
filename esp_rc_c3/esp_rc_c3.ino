@@ -2,6 +2,9 @@
 
 const IPAddress ip(192,168,1,1);
 const IPAddress subnet(255,255,255,0);
+#ifdef CAPTIVE_PORTAL
+  DNSServer dns;
+#endif
 AsyncWebServer svr(80);
 AsyncWebSocket ws("/ws");
 AsyncWebSocketClient *op=NULL;
@@ -78,10 +81,13 @@ void setup() {
 	WiFi.softAPConfig(ip,ip,subnet);
   Serial.printf("SSID: %s\nPASS: %s\nAPIP: %s\n",SSID,PASS,WiFi.softAPIP().toString().c_str());
 
+  #ifdef CAPTIVE_PORTAL
+    dns.start(53,"*",ip);
+  #endif
 	ws.onEvent(onWS);
 	svr.addHandler(&ws);
 	svr.on("/",HTTP_GET,[](AsyncWebServerRequest *request){request->send_P(200,"text/html",html);});
-
+	svr.onNotFound([](AsyncWebServerRequest *request){request->send_P(302,"text/html",html);});
 	svr.begin();
 	Serial.printf("svr started\n");
 
@@ -96,8 +102,11 @@ void setup() {
 }
 
 void loop() {
-  ArduinoOTA.handle();
+  #ifdef CAPTIVE_PORTAL
+    dns.processNextRequest();
+  #endif
 	ws.cleanupClients();
+  ArduinoOTA.handle();
 
   ledcWrite(I1PWM,PWM_MAX-max(0,+v[0]));ledcWrite(I2PWM,PWM_MAX-max(0,-v[0]));
   ledcWrite(I3PWM,PWM_MAX-max(0,+v[1]));ledcWrite(I4PWM,PWM_MAX-max(0,-v[1]));

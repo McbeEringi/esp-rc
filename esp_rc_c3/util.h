@@ -1,8 +1,12 @@
+//#define CAPTIVE_PORTAL // since websocket is disabled in ios captive portal this does not make sense
 #include <WiFi.h>
-#include <ArduinoOTA.h>
+#ifdef CAPTIVE_PORTAL
+  #include <DNSServer.h>
+#endif
 #include <AsyncTCP.h>// https://github.com/me-no-dev/AsyncTCP
 #include <ESPAsyncWebServer.h>// https://github.com/me-no-dev/ESPAsyncWebServer
 // requires bug fix: https://github.com/me-no-dev/ESPAsyncWebServer/issues/1101
+#include <ArduinoOTA.h>
 
 #define SSID "esp_rc_proto"
 #define PASS "sazanka_"
