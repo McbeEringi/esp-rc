@@ -63,11 +63,18 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
 }
 
 
-void setup() {
-  ledcSetup(I1PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I1PIN,I1PWM);
-	ledcSetup(I2PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I2PIN,I2PWM);
-	ledcSetup(I3PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I3PIN,I3PWM);
-	ledcSetup(I4PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I4PIN,I4PWM);
+void setup(){
+  #ifdef SIGMA_DELTA
+    sigmaDeltaSetup(I1PIN,I1PWM,PWM_FREQ);
+    sigmaDeltaSetup(I2PIN,I2PWM,PWM_FREQ);
+    sigmaDeltaSetup(I3PIN,I3PWM,PWM_FREQ);
+    sigmaDeltaSetup(I4PIN,I4PWM,PWM_FREQ);
+  #else
+    ledcSetup(I1PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I1PIN,I1PWM);
+    ledcSetup(I2PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I2PIN,I2PWM);
+    ledcSetup(I3PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I3PIN,I3PWM);
+    ledcSetup(I4PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I4PIN,I4PWM);
+  #endif
   ledcSetup(RPWM,PWM_FREQ,PWM_BIT);ledcAttachPin(RPIN,RPWM);
   ledcSetup(GPWM,PWM_FREQ,PWM_BIT);ledcAttachPin(GPIN,GPWM);
   ledcWrite(RPWM,PWM_MAX>>2);
@@ -101,15 +108,20 @@ void setup() {
   Serial.printf("OTA started\n");
 }
 
-void loop() {
+void loop(){
   #ifdef CAPTIVE_PORTAL
     dns.processNextRequest();
   #endif
 	ws.cleanupClients();
   ArduinoOTA.handle();
 
-  ledcWrite(I1PWM,PWM_MAX-max(0,+v[0]));ledcWrite(I2PWM,PWM_MAX-max(0,-v[0]));
-  ledcWrite(I3PWM,PWM_MAX-max(0,+v[1]));ledcWrite(I4PWM,PWM_MAX-max(0,-v[1]));
+  #ifdef SIGMA_DELTA
+    sigmaDeltaWrite(I1PWM,255*(PWM_MAX-max(0,+v[0]))/PWM_MAX);sigmaDeltaWrite(I2PWM,255*(PWM_MAX-max(0,-v[0]))/PWM_MAX);
+    sigmaDeltaWrite(I3PWM,255*(PWM_MAX-max(0,+v[1]))/PWM_MAX);sigmaDeltaWrite(I4PWM,255*(PWM_MAX-max(0,-v[1]))/PWM_MAX);
+  #else
+    ledcWrite(I1PWM,PWM_MAX-max(0,+v[0]));ledcWrite(I2PWM,PWM_MAX-max(0,-v[0]));
+    ledcWrite(I3PWM,PWM_MAX-max(0,+v[1]));ledcWrite(I4PWM,PWM_MAX-max(0,-v[1]));
+  #endif
 
   ledcWrite(RPWM,op?(v[0]+PWM_MAX)>>3:0);
   ledcWrite(GPWM,op?(v[1]+PWM_MAX)>>3:(sin(millis()/1000.*3.1415)*.5+.5)*PWM_MAX/4.);

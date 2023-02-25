@@ -1,4 +1,6 @@
 //#define CAPTIVE_PORTAL // since websocket is disabled in ios captive portal this does not make sense
+//#define SIGMA_DELTA
+
 #include <WiFi.h>
 #ifdef CAPTIVE_PORTAL
   #include <DNSServer.h>
@@ -10,7 +12,7 @@
 
 #define SSID "esp_rc_proto"
 #define PASS "sazanka_"
-#define PWM_FREQ 2000
+#define PWM_FREQ 20000
 #define PWM_BIT 10
 #define I1PIN 5
 #define I2PIN 4
