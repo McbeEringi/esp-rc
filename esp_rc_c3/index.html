@@ -20,10 +20,11 @@
 		<pre id="log"></pre>
 		<script>
 			'use strict';
-			let ws={},timer,stick_stat,logtim=0;
+			let ws={},timer,stick_stat;
 			const
 				w={},
 				te=new TextEncoder(),td=new TextDecoder(),
+				strfy=(w,n=0)=>['Array','Object'].includes(w.constructor.name)?'\n'+Object.entries(w).map(([x,y])=>'\t'.repeat(n)+x+': '+strfy(y,n+1)).join(''):w+'\n',
 				main=_=>(
 					log.textContent+='Connecting…\n',
 					ws=Object.assign(new WebSocket(`ws://${location.hostname}/ws`),{
@@ -38,11 +39,11 @@
 								_=>w.vel=[(e[1]<<8|e[2])-w.max,(e[3]<<8|e[4])-w.max],
 								_=>w.chat=[...(w.chat||[]),td.decode(e.slice(1))].slice(-8),
 							][e[0]]||(_=>w.msg=td.decode(e)))(),
-							cancelAnimationFrame(logtim),logtim=requestAnimationFrame(_=>log.textContent=JSON.stringify(w,null,'\t'))
+							log.textContent=strfy(w)
 						)
 					})
 				),
-				send=x=>ws.readyState==1&&ws.send(new Uint8Array(x).buffer),
+				send=w=>ws.readyState==1&&ws.send(new Uint8Array(w).buffer),
 				flush=_=>cmd.innerHTML=w.clis.reduce((a,x)=>(x!=w.id&&w.id==w.op&&(a+=`<option value="1,${x}">/op @a[id=${x}]</option>`),a),'');
 
 			stick.ontouchstart=e=>e.preventDefault();
