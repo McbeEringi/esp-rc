@@ -10,7 +10,7 @@ AsyncWebSocket ws("/ws");
 AsyncWebSocketClient *op=NULL;
 int16_t v[2]={0};
 
-void flush(AsyncWebSocket *ws){
+void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
   uint8_t l=ws->count()+2,a[l]={1,(uint8_t)op->id()};
   for(uint8_t i=2;i<l;i++)a[i]=(*(ws->getClients().nth(i-2)))->id();
   ws->binaryAll(a,l);
@@ -21,7 +21,7 @@ void flush(AsyncWebSocket *ws){
 
 void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void *arg,uint8_t *data,size_t len){
 	switch(type){
-		case WS_EVT_CONNECT:{
+		case WS_EVT_CONNECT:{// init tx [0,id,bit]
 			Serial.printf("conn: %u(%s)\n",client->id(),client->remoteIP().toString().c_str());
       uint8_t l=3,a[l]={0,(uint8_t)client->id(),PWM_BIT};
 			client->binary(a,l);
@@ -40,22 +40,28 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
 		case WS_EVT_ERROR:Serial.printf("error: %u(%s)\n",client->id(),*((uint16_t*)arg),(char*)data);break;
 		case WS_EVT_DATA:{
       AwsFrameInfo *info=(AwsFrameInfo*)arg;
-      if(info->final&&info->index==0&&info->len==len&&op==client){
-        if(data[0]==1){
-          // op [1,op]
-          AsyncWebSocketClient *tmp;
-          for(uint8_t i=0;i<ws->count();i++){
-            tmp=*(ws->getClients().nth(i));
-            if(tmp->id()==data[1]){op=tmp;flush(ws);break;}
-          }
-        }else{
-          // velocity [0,L,L,R,R]
-          // BE
-          v[0]=((data[1]<<8)|data[2])-PWM_MAX;
-          v[1]=((data[3]<<8)|data[4])-PWM_MAX;
-          data[0]=2;
-          ws->binaryAll(data,5);
-          Serial.printf("L: %d, R: %d\n",v[0],v[1]);
+      if(info->final&&info->index==0&&info->len==len){
+        switch(data[0]){
+          case 1:{// op rx [1,op]
+            if(op==client){
+              AsyncWebSocketClient *tmp;
+              for(uint8_t i=0;i<ws->count();i++){
+                tmp=*(ws->getClients().nth(i));
+                if(tmp->id()==data[1]){op=tmp;flush(ws);break;}
+              }
+            }
+          }break;
+          case 2:{// velocity rxtx [2,L,L,R,R] BigEndian
+            if(op==client){
+              v[0]=((data[1]<<8)|data[2])-PWM_MAX;
+              v[1]=((data[3]<<8)|data[4])-PWM_MAX;
+              ws->binaryAll(data,5);
+              Serial.printf("L: %d, R: %d\n",v[0],v[1]);
+            }
+          }break;
+          case 3:{// txt rxtx [3,...txt]
+              ws->binaryAll(data,info->len);
+          }break;
         }
       }
     }break;
