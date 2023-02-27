@@ -15,8 +15,8 @@
 		</style>
 		<div id="stick"><div></div></div>
 		
-		<select class="sty"><option value="" disabled>select command...</option><optgroup id="cmd"></optgroup></select> <button class="sty" onclick="this.previousElementSibling.value&&send(this.previousElementSibling.value.split(','))">run</button><br>
-		<textarea class="sty" rows="4" cols="32" placeholder="chat..."></textarea> <button class="sty" onclick="this.previousElementSibling.value&&send([3,...te.encode(`<${w.id}> ${this.previousElementSibling.value}`)],this.previousElementSibling.value='')">send</button>
+		<select class="sty" onchange="this.value&&send(this.value.split(','),console.log(1))"><option value="" disabled selected>select command to run...</option><optgroup id="cmd"></optgroup></select><br>
+		<input class="sty" placeholder="chat..." onchange="send([3,...te.encode(`<${w.id}> ${this.value}`)],this.value='')">
 		<pre id="log"></pre>
 		<script>
 			'use strict';
@@ -32,19 +32,22 @@
 						onopen:_=>console.log(log.textContent+='Opened\n'),
 						onclose:_=>console.log(log.textContent+='Closed\n',setTimeout(main,2000)),
 						onmessage:e=>(
-							e=new Uint8Array(e.data),
-							([
-								_=>(w.id=e[1],w.max=2**e[2]),
-								_=>flush(w.op=e[1],w.clis=[...e].slice(2)),
-								_=>w.vel=[(e[1]<<8|e[2])-w.max,(e[3]<<8|e[4])-w.max],
-								_=>w.chat=[...(w.chat||[]),td.decode(e.slice(1))].slice(-8),
-							][e[0]]||(_=>w.msg=td.decode(e)))(),
+							e.data.constructor.name=='String'?w.msg=e.data:
+							(
+								e=new Uint8Array(e.data),
+								([
+									_=>(w.id=e[1],w.max=2**e[2]),
+									_=>flush(w.op=e[1],w.clis=[...e].slice(2)),
+									_=>w.vel=[(e[1]<<8|e[2])-w.max,(e[3]<<8|e[4])-w.max],
+									_=>w.chat=[...(w.chat||[]),td.decode(e.slice(1))].slice(-8),
+								][e[0]]||(_=>w.msg=e))()
+							),
 							log.textContent=strfy(w)
 						)
 					})
 				),
 				send=w=>ws.readyState==1&&ws.send(new Uint8Array(w).buffer),
-				flush=_=>cmd.innerHTML=w.clis.reduce((a,x)=>(x!=w.id&&w.id==w.op&&(a+=`<option value="1,${x}">/op @a[id=${x}]</option>`),a),'');
+				flush=_=>(cmd.innerHTML=w.clis.reduce((a,x)=>(x!=w.id&&w.id==w.op&&(a+=`<option value="1,${x}">/op @a[id=${x}]</option>`),a),''),cmd.previousElementSibling.selected=1);
 
 			stick.ontouchstart=e=>e.preventDefault();
 			stick.onpointerdown=e=>(stick_stat=true,onpointermove(e));
