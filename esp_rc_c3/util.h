@@ -26,6 +26,13 @@
 #define RPIN 0
 #define GPIN 1
 
+// #define I1PIN 25
+// #define I2PIN 26
+// #define I3PIN 33
+// #define I4PIN 32
+// #define RPIN 14
+// #define GPIN 27
+
 #define I1PWM 0
 #define I2PWM 1
 #define I3PWM 2
@@ -52,7 +59,7 @@ const char html[] PROGMEM=R"rawliteral(
 		</style>
 		<div id="stick"><div></div></div>
 		
-		<select class="sty" onchange="this.value&&send(this.value.split(','),console.log(1))"><option value="" disabled selected>select command to run...</option><optgroup id="cmd"></optgroup></select><br>
+		<select class="sty" onchange="this.value&&send(this.value.split(','),console.log(1))"><option value="" disabled selected>select command to run...</option><optgroup id="cmd"></optgroup></select>
 		<input class="sty" placeholder="chat..." onchange="send([3,...te.encode(`<${w.id}> ${this.value}`)],this.value='')">
 		<pre id="log"></pre>
 		<script>
