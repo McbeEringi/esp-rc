@@ -1,144 +1,134 @@
-#include <WiFi.h>
-#include <ArduinoOTA.h>
-#ifdef CAPTIVE_PORTAL
-  #include <DNSServer.h>
-#endif
-#include <AsyncTCP.h>// https://github.com/me-no-dev/AsyncTCP
-#include <ESPAsyncWebServer.h>// https://github.com/me-no-dev/ESPAsyncWebServer
-
 #include "util.h"
-#define I1PWM 0
-#define I2PWM 1
-#define I3PWM 2
-#define I4PWM 3
-#ifdef STATLED
-  #define RPWM 4
-  #define GPWM 5
-#endif
 
 const IPAddress ip(192,168,1,1);
 const IPAddress subnet(255,255,255,0);
 #ifdef CAPTIVE_PORTAL
-  DNSServer dnsServer;
+  DNSServer dns;
 #endif
-AsyncWebServer server(80);
+AsyncWebServer svr(80);
 AsyncWebSocket ws("/ws");
-const long PWM_MAX=pow(2,PWM_BIT),_Z=0;
-const int ZPAD=1+(int)log10(PWM_MAX*2);
+AsyncWebSocketClient *op=NULL;
+int16_t v[2]={0};
 
-long v[2]={0,0};//L,R
+void flush(AsyncWebSocket *ws){// op tx [1,op,...clis]
+  uint8_t l=ws->count()+2,a[l]={1,(uint8_t)op->id()};
+  for(uint8_t i=2;i<l;i++)a[i]=(*(ws->getClients().nth(i-2)))->id();
+  ws->binaryAll(a,l);
+  Serial.printf("clis: ");
+  for(uint8_t i=2;i<l;i++)Serial.printf("%u ",a[i]);
+  Serial.printf(", op: %u\n",a[1]);
+}
 
-void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len){
+void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void *arg,uint8_t *data,size_t len){
 	switch(type){
-		case WS_EVT_CONNECT:
-			Serial.printf("ws[%u] connect: %s\n", client->id(), client->remoteIP().toString().c_str());
-			client->printf("{\"purpose\":\"init\",\"cid\":%u,\"cip\":\"%s\",\"max\":%u,\"zpad\":%u}", client->id(), client->remoteIP().toString().c_str(), PWM_MAX, ZPAD);
-			//client->ping();
-			break;
+		case WS_EVT_CONNECT:{// init tx [0,id,bit]
+			Serial.printf("conn: %u(%s)\n",client->id(),client->remoteIP().toString().c_str());
+      uint8_t l=3,a[l]={0,(uint8_t)client->id(),PWM_BIT};
+			client->binary(a,l);
+      if(op==NULL)op=client;
+      flush(ws);
+    }break;
 		case WS_EVT_DISCONNECT:
-			Serial.printf("ws[%u] disconnect\n", client->id());
+			Serial.printf("disconn: %u\n",client->id());
+      if(ws->count()>0){
+        if(op==client)op=*(ws->getClients().nth(ws->count()-1));
+        flush(ws);
+      }else op=NULL;
 			v[0]=0;v[1]=0;
 			break;
-		case WS_EVT_ERROR:
-			Serial.printf("ws[%u] error(%u): %s\n", client->id(), *((uint16_t*)arg), (char*)data);
-			break;
-		case WS_EVT_PONG:
-			Serial.printf("ws[%u] pong\n", client->id());
-			break;
-		case WS_EVT_DATA:
-			{
-				AwsFrameInfo *info=(AwsFrameInfo*)arg;
-				if(info->final && info->index==0 && info->len==len && info->opcode==WS_TEXT){
-					data[len]=0;
-					String str=(char*)data;
-					Serial.printf("ws[%u] text-msg[%llu]: %s\n", client->id(), info->len, str.c_str());
-					ws.printfAll("{\"purpose\":\"pong\",\"pong\":\"%s\"}",str.c_str());
-					if(str.startsWith("V_CTR")){
-						// "V_CTR[L<int>][R<int>]"
-						// 0padding needed
-						// example: "V_CTR256256"
-						v[0]=str.substring(5,5+ZPAD).toInt()-PWM_MAX;
-						v[1]=str.substring(5+ZPAD,5+ZPAD+ZPAD).toInt()-PWM_MAX;
-						//v[0]=v[0]*5/6;v[1]=v[1]*5/6;
-						Serial.printf("%d %d\n",v[0],v[1]);
-						ws.printfAll("{\"purpose\":\"check\",\"vl\":%d,\"vr\":%d}",v[0],v[1]);
-					}
-				}
-			}
-			break;
+		case WS_EVT_PONG:Serial.printf("pong: %u\n",client->id());break;
+		case WS_EVT_ERROR:Serial.printf("error: %u(%s)\n",client->id(),*((uint16_t*)arg),(char*)data);break;
+		case WS_EVT_DATA:{
+      AwsFrameInfo *info=(AwsFrameInfo*)arg;
+      if(info->final&&info->index==0&&info->len==len){
+        switch(data[0]){
+          case 1:{// op rx [1,op]
+            if(op==client){
+              AsyncWebSocketClient *tmp;
+              for(uint8_t i=0;i<ws->count();i++){
+                tmp=*(ws->getClients().nth(i));
+                if(tmp->id()==data[1]){op=tmp;flush(ws);break;}
+              }
+            }
+          }break;
+          case 2:{// velocity rxtx [2,L,L,R,R] BigEndian
+            if(op==client){
+              v[0]=((data[1]<<8)|data[2])-PWM_MAX;
+              v[1]=((data[3]<<8)|data[4])-PWM_MAX;
+              ws->binaryAll(data,5);
+              Serial.printf("L: %d, R: %d\n",v[0],v[1]);
+            }
+          }break;
+          case 3:{// txt rxtx [3,...txt]
+              ws->binaryAll(data,info->len);
+          }break;
+        }
+      }
+    }break;
 	}
 }
-#ifdef CAPTIVE_PORTAL
-class CP:public AsyncWebHandler{
-public:
-  CP(){}
-  virtual ~CP(){}
-  bool canHandle(AsyncWebServerRequest *request){return true;}
-  void handleRequest(AsyncWebServerRequest *request){request->send_P(200,"text/html",html);}
-};
-#endif
+
 
 void setup(){
-  #ifdef STATLED
-    ledcSetup(RPWM,PWM_FREQ,PWM_BIT);ledcAttachPin(RPIN,RPWM);
-    ledcSetup(GPWM,PWM_FREQ,PWM_BIT);ledcAttachPin(GPIN,GPWM);
-    ledcWrite(RPWM,PWM_MAX/2);
+  #ifdef SIGMA_DELTA
+    sigmaDeltaSetup(I1PIN,I1PWM,PWM_FREQ);
+    sigmaDeltaSetup(I2PIN,I2PWM,PWM_FREQ);
+    sigmaDeltaSetup(I3PIN,I3PWM,PWM_FREQ);
+    sigmaDeltaSetup(I4PIN,I4PWM,PWM_FREQ);
+  #else
+    ledcSetup(I1PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I1PIN,I1PWM);
+    ledcSetup(I2PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I2PIN,I2PWM);
+    ledcSetup(I3PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I3PIN,I3PWM);
+    ledcSetup(I4PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I4PIN,I4PWM);
   #endif
-	Serial.begin(115200);
+  ledcSetup(RPWM,PWM_FREQ,PWM_BIT);ledcAttachPin(RPIN,RPWM);
+  ledcSetup(GPWM,PWM_FREQ,PWM_BIT);ledcAttachPin(GPIN,GPWM);
+  ledcWrite(RPWM,PWM_MAX>>2);
+
+  Serial.begin(115200);
 	delay(1000);
 
-	// softAP https://github.com/espressif/arduino-esp32/blob/master/libraries/WiFi/src/WiFiAP.h
-	WiFi.mode(WIFI_AP_STA);
-	WiFi.softAP(ssid,pass);
-	delay(100);//https://github.com/espressif/arduino-esp32/issues/985
+  // https://docs.espressif.com/projects/arduino-esp32/en/latest/api/wifi.html
+	WiFi.softAP(SSID,PASS);
+	delay(100);// https://github.com/espressif/arduino-esp32/issues/985
 	WiFi.softAPConfig(ip,ip,subnet);
-  #ifdef CAPTIVE_PORTAL
-    dnsServer.start(53, "*", WiFi.softAPIP());
-  #endif
-  Serial.printf("SSID: %s\nPASS: %s\nAPIP: %s\n",ssid,pass,WiFi.softAPIP().toString().c_str());
+  Serial.printf("SSID: %s\nPASS: %s\nAPIP: %s\n",SSID,PASS,WiFi.softAPIP().toString().c_str());
 
-	ws.onEvent(onEvent);
-	server.addHandler(&ws);
   #ifdef CAPTIVE_PORTAL
-    server.addHandler(new CP());
+    dns.start(53,"*",ip);
   #endif
-	server.on("/",HTTP_GET,[](AsyncWebServerRequest *request){request->send_P(200,"text/html",html);});
-	server.begin();
-	Serial.println("server started");
+	ws.onEvent(onWS);
+	svr.addHandler(&ws);
+	svr.on("/",HTTP_GET,[](AsyncWebServerRequest *request){request->send_P(200,"text/html",html);});
+	svr.onNotFound([](AsyncWebServerRequest *request){request->send_P(302,"text/html",html);});
+	svr.begin();
+	Serial.printf("svr started\n");
 
 	ArduinoOTA
-		.setPassword("sazanka_")
-		.onStart([](){Serial.printf("Start updating %s\n",ArduinoOTA.getCommand()==U_FLASH?"sketch":"filesystem");})
-		.onEnd([](){Serial.println("\nEnd");})
-		.onProgress([](unsigned int progress, unsigned int total){Serial.printf("Progress: %u%%\r",(progress/(total/100)));})
-		.onError([](ota_error_t error){Serial.printf("Error[%u]", error);})
+    .setHostname(SSID).setPassword(PASS)
+		.onStart([](){Serial.printf("update started: %s\n",ArduinoOTA.getCommand()==U_FLASH?"flash":"spiffs");ws.enable(false);ws.printfAll("update started: %s\n",ArduinoOTA.getCommand()==U_FLASH?"flash":"spiffs");ws.closeAll();})
+		.onEnd([](){Serial.printf("End\n");})
+		.onProgress([](unsigned int x,unsigned int a){ledcWrite(RPWM,PWM_MAX*(a-x)/a>>2);ledcWrite(GPWM,PWM_MAX*x/a>>2);})
+		.onError([](ota_error_t e){Serial.printf("update error: %u\n",e);})
 		.begin();
-
-	ledcSetup(I1PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I1,I1PWM);
-	ledcSetup(I2PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I2,I2PWM);
-	ledcSetup(I3PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I3,I3PWM);
-	ledcSetup(I4PWM,PWM_FREQ,PWM_BIT);ledcAttachPin(I4,I4PWM);
+  Serial.printf("OTA started\n");
 }
 
 void loop(){
-	ArduinoOTA.handle();
   #ifdef CAPTIVE_PORTAL
-    dnsServer.processNextRequest();
+    dns.processNextRequest();
   #endif
 	ws.cleanupClients();
-  //short break
-  ledcWrite(I1PWM,PWM_MAX-max(_Z,v[0]));ledcWrite(I2PWM,PWM_MAX-max(_Z,-v[0]));//if(v[0]>0){ledcWrite(I1PWM,PWM_MAX-v[0]);ledcWrite(I2PWM,PWM_MAX);}else{ledcWrite(I1PWM,PWM_MAX);ledcWrite(I2PWM,PWM_MAX+v[0]);}
-  ledcWrite(I3PWM,PWM_MAX-max(_Z,v[1]));ledcWrite(I4PWM,PWM_MAX-max(_Z,-v[1]));//if(v[1]>0){ledcWrite(I3PWM,PWM_MAX-v[1]);ledcWrite(I4PWM,PWM_MAX);}else{ledcWrite(I3PWM,PWM_MAX);ledcWrite(I4PWM,PWM_MAX+v[1]);}
-  //no break
-	//ledcWrite(I1PWM,min(0,-v[0]));ledcWrite(I2PWM,max(0,v[0]));//if(v[0]>0){ledcWrite(I1PWM,0);ledcWrite(I2PWM,v[0]);}else{ledcWrite(I1PWM,-v[0]);ledcWrite(I2PWM,0);}
-	//ledcWrite(I3PWM,min(0,-v[1]));ledcWrite(I4PWM,max(0,v[1]));//if(v[1]>0){ledcWrite(I3PWM,0);ledcWrite(I4PWM,v[1]);}else{ledcWrite(I3PWM,-v[1]);ledcWrite(I4PWM,0);}
-  #ifdef STATLED
-    if(ws.count()>0){
-      ledcWrite(RPWM,(v[0]+PWM_MAX)/4);
-      ledcWrite(GPWM,(v[1]+PWM_MAX)/4);
-    }else{
-      ledcWrite(RPWM,0);
-      ledcWrite(GPWM,(sin(millis()/1000.*3.1415)*.5+.5)*PWM_MAX/2);
-    }
+  ArduinoOTA.handle();
+
+  #ifdef SIGMA_DELTA
+    sigmaDeltaWrite(I1PWM,255*(PWM_MAX-max(0,+v[0]))/PWM_MAX);sigmaDeltaWrite(I2PWM,255*(PWM_MAX-max(0,-v[0]))/PWM_MAX);
+    sigmaDeltaWrite(I3PWM,255*(PWM_MAX-max(0,+v[1]))/PWM_MAX);sigmaDeltaWrite(I4PWM,255*(PWM_MAX-max(0,-v[1]))/PWM_MAX);
+  #else
+    ledcWrite(I1PWM,PWM_MAX-max(0,+v[0]));ledcWrite(I2PWM,PWM_MAX-max(0,-v[0]));
+    ledcWrite(I3PWM,PWM_MAX-max(0,+v[1]));ledcWrite(I4PWM,PWM_MAX-max(0,-v[1]));
   #endif
+
+  ledcWrite(RPWM,op?(v[0]+PWM_MAX)>>3:0);
+  ledcWrite(GPWM,op?(v[1]+PWM_MAX)>>3:(sin(millis()/1000.*3.1415)*.5+.5)*PWM_MAX/4.);
 }
