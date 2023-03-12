@@ -38,14 +38,14 @@ const char html[] PROGMEM=R"rawliteral(
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width,initial-scale=1">
-		<title>esp_rc</title>
+		<title>esp_rc_omni</title>
 	</head>
 	<body>
 		<style>
 			:root{--box:min(100vmin,480px);--cir:0.7;--dot:0.2;}
 			@media(prefers-color-scheme:dark){:root,.ui{background-color:#222;color:#fff;}}
 			.ui{z-index:1;position:relative;}
-			#c{width:100%;height:100%;position:fixed;top:0;left:0;touch-action:none;}
+			#c{width:100%;height:100%;position:fixed;top:0;left:0;touch-action:none;user-select:none;-webkit-user-select:none;}
 			#log{opacity:.5;pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere;}
 		</style>
 		<canvas id="c"></canvas>
