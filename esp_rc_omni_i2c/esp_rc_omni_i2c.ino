@@ -1,5 +1,4 @@
 #include "util.h"
-#include "BMX055.h"
 
 const IPAddress ip(192,168,1,1);
 const IPAddress subnet(255,255,255,0);
@@ -7,10 +6,8 @@ AsyncWebServer svr(80);
 AsyncWebSocket ws("/ws");
 AsyncWebSocketClient *op=NULL;
 int16_t v[3]={0};
-Adafruit_SSD1306 display(128,64,&Wire,-1);
 Ticker ticker;
-Madgwick filter;
-BMX055 gyro;
+Adafruit_SSD1306 display(128,64,&Wire,-1);
 bool flag=false;
 
 void interval(){flag=true;}
@@ -97,16 +94,11 @@ void setup(){
 	display.display();
 	delay(1000);
 
-	gyro.init();
-	filter.begin(100);
-	display.clearDisplay();display.setCursor(0,0);
-	display.printf("Gyro OK\n");
-	display.display();
-
   // https://docs.espressif.com/projects/arduino-esp32/en/latest/api/wifi.html
 	WiFi.softAP(SSID,PASS);
 	delay(100);// https://github.com/espressif/arduino-esp32/issues/985
 	WiFi.softAPConfig(ip,ip,subnet);
+  display.clearDisplay();display.setCursor(0,0);
 	display.printf("SSID: %s\nPASS: %s\nAPIP: %s\n",SSID,PASS,WiFi.softAPIP().toString().c_str());
 	display.display();
 
@@ -133,19 +125,16 @@ void setup(){
 	Serial.printf("SSID: %s\nPASS: %s\nAPIP: %s\n",SSID,PASS,WiFi.softAPIP().toString().c_str());
 	delay(2000);
 
-	ticker.attach_ms(10,interval);
+	ticker.attach_ms(20,interval);
 }
 
 void loop(){
 	ws.cleanupClients();
   ArduinoOTA.handle();
 	if(flag){
-		gyro.read();
 		display.clearDisplay();
 		display.setCursor(0,0);
-		display.printf("%6.2f,%6.2f,%6.2f\n%6.2f,%6.2f,%6.2f\n%6d,%6d,%6d\n",gyro.Gx,gyro.Gy,gyro.Gz, gyro.Ax,gyro.Ay,gyro.Az, gyro.Mx,gyro.My,gyro.Mz);
-		filter.updateIMU(-gyro.Gx,gyro.Gy,-gyro.Gz, -gyro.Ax,gyro.Ay,-gyro.Az);//, -gyro.Mx,-gyro.My,-gyro.Mz);
-		display.printf("\n%6.2f,%6.2f,%6.2f\n",filter.getRoll(),filter.getPitch(),filter.getYaw());
+		display.printf("%4d,%4d,%4d\n cli_cnt: %d\n op: %d",v[0],v[1],v[2],ws.count(),op==NULL?0:op->id());
 		display.display();
 		flag=false;
 	}

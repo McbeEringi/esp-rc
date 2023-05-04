@@ -11,14 +11,12 @@
 // requires bug fix: https://github.com/me-no-dev/ESPAsyncWebServer/issues/1101
 #include <ArduinoOTA.h>
 
+#include <Ticker.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #define SSD1306_NO_SPLASH
 
-#include <MadgwickAHRS.h>
-#include <Ticker.h>
-
-#define SSID "esp_rc_omni_ex"
+#define SSID "esp_rc_omni_i2c"
 #define PASS "mcbeeringi"
 #define PWM_FREQ 20000
 #define PWM_BIT 10
