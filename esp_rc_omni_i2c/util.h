@@ -135,12 +135,12 @@ const char html[] PROGMEM=R"rawliteral(
 					(timer||(core(),timer=setTimeout(_=>timer=0,50)))
 				)(_=>send([2,...Object.values(ptr).reduce((a,x)=>(
 					[
-						{p:[0,1],n:[-1,0]},
-						{p:[.866,-.5],n:[.5,.866]},
-						{p:[-.866,-.5],n:[.5,-.866]}
+						{p:[.866,.5],n:[-.5,.866]},
+						{p:[-.866,.5],n:[-.5,-.866]},
+						{p:[0,-1],n:[1,0]}
 					].map((y,i)=>[
 						_=>(y.n[0]*x.opn[0]+y.n[1]*-x.opn[1])*x.opnl,
-						_=>Math.hypot(...y.p)*-x.opn[0]*x.opnl
+						_=>Math.hypot(...y.p)*-x.opn[0]*x.opnl*.5
 					][x.i]()+a[i])
 				),[0,0,0]).flatMap(x=>(x=(x+1)*w.max,[x>>8,x&0xff]))]));
 
