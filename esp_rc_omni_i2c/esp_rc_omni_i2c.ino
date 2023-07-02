@@ -36,7 +36,7 @@ void onWS(AsyncWebSocket *ws,AsyncWebSocketClient *client,AwsEventType type,void
         if(op==client)op=*(ws->getClients().nth(ws->count()-1));
         flush(ws);
       }else op=NULL;
-			v[0]=0;v[1]=0;
+			v[0]=0;v[1]=0;v[2]=0;
 			break;
 		case WS_EVT_PONG:Serial.printf("pong: %u\n",client->id());break;
 		case WS_EVT_ERROR:Serial.printf("error: %u(%s)\n",client->id(),*((uint16_t*)arg),(char*)data);break;
